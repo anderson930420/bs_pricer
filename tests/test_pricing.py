@@ -42,3 +42,8 @@ def test_d1_d2_are_finite():
     d1, d2 = _d1_d2(100.0, 100.0, 0.2, 1.0, 0.05)
     assert math.isfinite(d1)
     assert math.isfinite(d2)
+
+def test_price_non_negative():
+    result = price(100, 100, 0.2, 1, 0.05)
+    assert result["call"] >= -1e-12
+    assert result["put"] >= -1e-12
