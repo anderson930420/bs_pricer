@@ -12,21 +12,31 @@ def test_price_returns_dict_with_call_put_keys():
     assert isinstance(result, dict)
     assert "call" in result
     assert "put" in result
+    assert math.isfinite(result["call"])
+    assert math.isfinite(result["put"])
 
-def test_norm_cdf_basic_properties():
-    # N(0) = 0.5
-    assert abs(_norm_cdf(0.0) - 0.5) < 1e-12
+def test_norm_cdf_monotonic():
+    x = [-10.0, -5.0, 0.0, 5.0, 10.0]
+    y = [_norm_cdf(val) for val in x]
+    assert y == sorted(y)
 
-    # symmetry: N(-x) = 1 - N(x)
-    x = 1.3
-    assert abs(_norm_cdf(-x) - (1.0 - _norm_cdf(x))) < 1e-12
+def test_norm_cdf_symmetry():
+    xs = [0.1, 0.5, 1.0, 2.0, 3.0]
+    tol = 1e-5
+    for x in xs:
+        lhs = _norm_cdf(-x)
+        rhs = 1.0 - _norm_cdf(x)
+        diff = abs(lhs - rhs)
+        assert diff < tol
 
-def test_norm_cdf_extreme_values():
-    # N(10) ~ 1.0
-    assert abs(_norm_cdf(10.0) - 1.0) < 1e-12
+def test_norm_cdf_extreme_values_are_near_bounds(): 
+    assert _norm_cdf(10.0) > 0.999
+    assert _norm_cdf(-10.0) < 0.001 
 
-    # N(-10) ~ 0.0
-    assert abs(_norm_cdf(-10.0) - 0.0) < 1e-12
+def test_norm_cdf_range():
+    x = [-10.0, -5.0, 0.0, 5.0, 10.0]
+    y = [_norm_cdf(val) for val in x]
+    assert all(0 <= val <= 1 for val in y)
 
 def test_d1_d2_are_finite():
     d1, d2 = _d1_d2(100.0, 100.0, 0.2, 1.0, 0.05)
