@@ -2,7 +2,10 @@
     No validation / IO / formatting'''
 import math
 def _d1_d2(S, K, sigma, T, r):
-        raise NotImplementedError
+    vol_sqrt_t = sigma * math.sqrt(T)
+    d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / vol_sqrt_t
+    d2 = d1 - vol_sqrt_t
+    return d1, d2
 
 def _norm_cdf(x: float) -> float:
     """
