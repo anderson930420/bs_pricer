@@ -30,4 +30,9 @@ def price(S, K, sigma, T, r):
     #Assemble the call price
     #Assemble the put price
     #Return the results
-    raise NotImplementedError
+    d1, d2 = _d1_d2(S, K, sigma, T, r)
+    n_d1 = 1 - _norm_cdf(d1)
+    n_d2 = 1 - _norm_cdf(d2)
+    call_price = S * n_d1 - K * math.exp(-r * T) * n_d2
+    put_price = K * math.exp(-r * T) * (1 - n_d2) - S * (1 - n_d1)
+    return {"call": call_price, "put": put_price}
