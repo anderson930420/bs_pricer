@@ -1,11 +1,14 @@
 '''Only Pricing function for Black-Scholes-Merton model
     No validation / IO / formatting'''
-
+import math
 def _d1_d2(S, K, sigma, T, r):
         raise NotImplementedError
 
-def _norm_cdf(x):
-        raise NotImplementedError
+def _norm_cdf(x: float) -> float:
+    """
+    Standard normal cumulative distribution function N(x).
+    """
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
 
 def price(S, K, sigma, T, r):
     '''
