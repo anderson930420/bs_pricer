@@ -1,4 +1,4 @@
-from bs_pricer import pricing
+from . import pricing
 import math
 # validation.py (module level)
 
