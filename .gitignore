@@ -14,3 +14,5 @@ __pycache__/
 # setuptools metadata created during editable installs (pip install -e .)
 # Not part of the source code and should be ignored
 *.egg-info/
+
+*.db
