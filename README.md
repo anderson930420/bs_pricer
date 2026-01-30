@@ -1,4 +1,4 @@
-# bs_pricer — Black–Scholes Pricing Engine (Engineering-first)
+# bs_pricer — Black–Scholes Pricing Engine 
 
 A layered Black–Scholes pricing system with strict validation, surface generation,
 FIFO PnL calculation, and a Streamlit UI as a pure consumer.
