@@ -32,7 +32,8 @@ The project follows a modular architecture based on the Separation of Concerns (
    cd bs_pricer
    
 2. Install dependencies:
-  pip install -r requirements.txt
+   ```bash
+   pip install -r requirements.txt
 
 ## Usage
 
