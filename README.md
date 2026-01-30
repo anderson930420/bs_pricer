@@ -66,32 +66,38 @@ Run tests via:
 
 This project is built with a modular architecture, where each component has a strictly defined responsibility and technical specification.
 
+## Module Specifications
+
 ### 1. Configuration & Input Handling
-* **`config.py` (Configuration)**: Centralizes default parameters and valid numerical ranges for $S, K, \sigma, T, r$[cite: 4, 5]. [cite_start]It defines min/max bounds for validation and UI sliders to ensure consistent constraints across the project[cite: 7, 9].
-* **`validation.py` (Input Validation)**: Defines the `BSParams` data structure to hold core parameters[cite: 10, 12]. [cite_start]It performs positivity checks and numerical sanity tests (NaN/Infinity) before raising user-facing errors[cite: 13, 14].
+* **`config.py` (Configuration & Defaults)**: Centralizes default parameters and defines valid numerical ranges (min/max) for $S, K, \sigma, T, r$. It exposes constants for reuse across the CLI and Streamlit UI to avoid "magic numbers".
+* **`validation.py` (Input Validation)**: Defines the `BSParams` data structure to hold parameters. It checks for positivity, numerical sanity (NaN/Infinity), and valid bounds to separate correctness checking from business logic.
 
 ### 2. Analytical Engine
-* **`pricing.py` (Core Engine)**: Implements the Black-Scholes closed-form pricing logic[cite: 16, 18]. [cite_start]It computes $d_1$, $d_2$, and the standard normal CDF to provide a unified interface for both Call and Put prices[cite: 19, 21, 22].
-* **`surface.py` (Option Value Surface)**: Generates a 2D grid across stock prices and volatilities[cite: 24, 25]. [cite_start]It decouples batch evaluation from the core pricing logic to return a value matrix for visualization[cite: 28, 30].
-* **`pnl.py` (Profit & Loss Analysis)**: Accepts the option value surface and subtracts the premium element-wise to compute P&L[cite: 31, 33, 35]. [cite_start]It preserves sign conventions to isolate financial interpretation from pricing mechanics[cite: 36, 37].
+* **`pricing.py` (Core Pricing Engine)**: Implements the Black-Scholes closed-form solutions. It computes $d_1, d_2$ and standard normal CDF terms to provide a unified interface for Call and Put prices.
+* **`surface.py` (Option Value Surface)**: Generates price grids across stock prices and volatilities. It decouples batch evaluation from the core pricing engine to return matrices ready for visualization.
+* **`pnl.py` (Profit & Loss Analysis)**: Computes P&L surfaces by accepting value surfaces and subtracting the premium element-wise. It preserves sign conventions to isolate financial interpretation from mechanics.
 
-### 3. Data Persistence & Infrastructure
-* **`db/models.py` (Database Models)**: Defines the persistent schema for Inputs (parameters/timestamps) and Outputs (results/shocked values) to ensure reproducibility[cite: 38, 40, 41, 43].
-* **`db/repo.py` (Repository Layer)**: Encapsulates database operations, including single record inserts and bulk inserts for surface results[cite: 44, 45, 47]. [cite_start]This prevents the UI from depending on ORM details[cite: 49].
+### 3. Data Persistence (Database Layer)
+* **`db/models.py` (Database Models)**: Defines the persistent schema for Inputs (parameters/timestamps) and Outputs (results/shocked values) to ensure traceability.
+* **`db/repo.py` (Database Access)**: Encapsulates database operations, including single record logging and bulk inserts for surface data. This prevents logic layers from depending on ORM details.
 
 ### 4. Interface & Quality Assurance
-* **`app_streamlit.py` (Web UI)**: Collects user inputs via widgets, triggers validation, and renders interactive heatmaps[cite: 59, 62, 64]. [cite_start]It is designed so the UI only orchestrates and visualizes, never computes[cite: 66].
-* **`cli.py` (CLI Interface)**: A thin orchestration layer for terminal-based parameter parsing, price computation, and data persistence[cite: 50, 53, 58].
-* **`tests/` (Verification)**: Ensures stability through pricing accuracy benchmarks, property tests (put-call parity), and database consistency checks[cite: 67, 69, 70, 72].
+* **`app_streamlit.py` (Streamlit App)**: An interactive visualization interface that collects user input, triggers validation, and renders heatmaps.
+* **`cli.py` (Command-Line Interface)**: A thin orchestration layer for terminal-based parameter parsing and price display with no internal business logic.
+* **`tests/` (Verification)**: Ensures stability through pricing accuracy benchmarks, property tests (put-call parity), and database consistency checks.
 
 ## Technical Architecture Overview
 
-| Layer | Responsibility | Key Modules |
+The system follows a tiered architecture to deliver a professional and maintainable codebase:
+
+| Layer | Primary Responsibility | Included Modules |
 | :--- | :--- | :--- |
-| **Logic** | Pricing & Greeks calculation | `pricing.py`, `validation.py` |
-| **Analysis** | Grid evaluation & P&L mapping | `surface.py`, `pnl.py` |
-| **Storage** | Persistence & traceability | `db/models.py`, `db/repo.py` |
-| **UI** | Visualization & interaction | `app_streamlit.py`, `cli.py` |
+| **Logic** | Core Math & Validation | `pricing.py`, `validation.py` |
+| **Analysis** | Grid Simulation & P&L | `surface.py`, `pnl.py` |
+| **Persistence**| Data Storage & Tracking | `db/models.py`, `db/repo.py` |
+| **Presentation**| CLI & Web Visualization | `cli.py`, `app_streamlit.py` |
+
+
 
 ---
-*Specifications are based on the project's internal Function Map & Design Document[cite: 1, 2].*
+*This specification is based on the project's internal function map and design documentation.*
