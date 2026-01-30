@@ -23,6 +23,21 @@ The project follows a modular architecture based on the Separation of Concerns (
 | `db/` | Database models and repository layer for data persistence. |
 | `app_streamlit.py` | Interactive UI and visualization orchestration. |
 
+---
+
+## Mathematical Foundation
+
+The project implements the standard Black-Scholes-Merton partial differential equation solutions:
+
+$$C = S_tN(d_1) - Ke^{-rt}N(d_2)$$
+$$P = Ke^{-rt}N(-d_2) - S_tN(-d_1)$$
+
+Where $d_1$ and $d_2$ are calculated as:
+$$d_1 = \frac{\ln(S/K) + (r + \sigma^2/2)T}{\sigma\sqrt{T}}$$
+$$d_2 = d_1 - \sigma\sqrt{T}$$
+
+---
+
 ## Getting Started
 
 ### Installation
