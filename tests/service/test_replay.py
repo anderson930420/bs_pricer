@@ -14,6 +14,7 @@ def test_replay_matches_persisted_price(tmp_path: Path) -> None:
 
     fixed = datetime(2026, 1, 30, tzinfo=timezone.utc)
 
+    # Persist one run (CALL)
     run = svc.run_point(
         S=100,
         K=100,
@@ -25,15 +26,19 @@ def test_replay_matches_persisted_price(tmp_path: Path) -> None:
         tags=("replay-test",),
     )
 
-    # Replay: recompute using stored inputs
-    inputs = run.inputs
-    out = svc.engine(
-        S=inputs.S,
-        K=inputs.K,
-        sigma=inputs.sigma,
-        T=inputs.T,
-        r=inputs.r,
-    )
+    # Load it back (ensures read-side works too)
+    run_db = repo.get_pricing_run(run.run_id)
+    assert run_db is not None
+    assert run_db == run
 
-    replay_price = out["call"]
-    assert replay_price == run.outputs.price
+    # Replay: recompute from persisted inputs using the same engine contract
+    inp = run_db.inputs
+    out = svc.engine(S=inp.S, K=inp.K, sigma=inp.sigma, T=inp.T, r=inp.r)
+
+    # Compare the same option_type price
+    if run_db.outputs.option_type == OptionType.CALL:
+        replay_price = float(out["call"])
+    else:
+        replay_price = float(out["put"])
+
+    assert replay_price == run_db.outputs.price
