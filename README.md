@@ -33,15 +33,19 @@ The project follows a modular architecture based on the Separation of Concerns (
    
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
-
+   pip install -r requirements.txt 
+   ```
 ## Usage
 
-### Launch Web Interface:
-  streamlit run app_streamlit.py
+### Launch Web Interface
+   ```bash
+   streamlit run app_streamlit.pybash
+   ```
 
 ### Command-Line Interface (CLI):
-  python cli.py --S 100 --K 100 --T 1 --r 0.05 --sigma 0.2
+   ```bash
+   python cli.py --S 100 --K 100 --T 1 --r 0.05 --sigma 0.2
+   ```
 
 ## Testing
 
@@ -54,4 +58,6 @@ A comprehensive test suite is included to ensure numerical precision:
 * **Surface data consistency checks.**
   
 Run tests via:
+   ```bash
   pytest tests/
+  ```
