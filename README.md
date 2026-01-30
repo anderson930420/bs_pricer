@@ -1,7 +1,7 @@
 # Black-Scholes Option Pricer
 
 A professional Python implementation of the Black-Scholes model for European option pricing, Greek risk analysis, and dynamic P&L visualization.
-
+---
 ## Features
 
 * **Core Pricing Engine**: Exact closed-form solutions for European Call and Put options.
@@ -9,7 +9,7 @@ A professional Python implementation of the Black-Scholes model for European opt
 * **Interactive Dashboard**: Streamlit-based web interface with real-time parameter tuning.
 * **Heatmap Visualization**: 2D surface analysis for Option Value and P&L across varying Spot Prices and Volatilities.
 * **Persistence Layer**: Built-in database support for calculation traceability and historical logging.
-
+---
 ## Project Structure
 
 The project follows a modular architecture based on the Separation of Concerns (SoC) principle:
@@ -50,6 +50,8 @@ $$d_2 = d_1 - \sigma\sqrt{T}$$
    ```bash
    pip install -r requirements.txt 
    ```
+---
+
 ## Usage
 
 ### Launch Web Interface
@@ -61,6 +63,7 @@ $$d_2 = d_1 - \sigma\sqrt{T}$$
    ```bash
    python cli.py --S 100 --K 100 --T 1 --r 0.05 --sigma 0.2
    ```
+---
 
 ## Testing
 
@@ -76,6 +79,7 @@ Run tests via:
    ```bash
   pytest tests/
   ```
+---
 
 ## System Specifications & Module Design
 
@@ -126,6 +130,8 @@ This project is built with a modular architecture, where each component has a st
 * **`tests/` (Verification)**:
 
    Ensures stability through pricing accuracy benchmarks, property tests (put-call parity), and database consistency checks.
+
+---
 
 ## Technical Architecture Overview
 
