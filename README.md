@@ -73,18 +73,26 @@ This project is built with a modular architecture, where each component has a st
 * **`validation.py` (Input Validation)**: Defines the `BSParams` data structure to hold parameters. It checks for positivity, numerical sanity (NaN/Infinity), and valid bounds to separate correctness checking from business logic.
 
 ### 2. Analytical Engine
-* **`pricing.py` (Core Pricing Engine)**: Implements the Black-Scholes closed-form solutions. It computes $d_1, d_2$ and standard normal CDF terms to provide a unified interface for Call and Put prices.
-* **`surface.py` (Option Value Surface)**: Generates price grids across stock prices and volatilities. It decouples batch evaluation from the core pricing engine to return matrices ready for visualization.
-* **`pnl.py` (Profit & Loss Analysis)**: Computes P&L surfaces by accepting value surfaces and subtracting the premium element-wise. It preserves sign conventions to isolate financial interpretation from mechanics.
+* **`pricing.py` (Core Pricing Engine)**:
+  Implements the Black-Scholes closed-form solutions. It computes $d_1, d_2$ and standard normal CDF terms to provide a unified interface for Call and Put prices.
+* **`surface.py` (Option Value Surface)**:
+  Generates price grids across stock prices and volatilities. It decouples batch evaluation from the core pricing engine to return matrices ready for visualization.
+* **`pnl.py` (Profit & Loss Analysis)**:
+  Computes P&L surfaces by accepting value surfaces and subtracting the premium element-wise. It preserves sign conventions to isolate financial interpretation from mechanics.
 
 ### 3. Data Persistence (Database Layer)
-* **`db/models.py` (Database Models)**: Defines the persistent schema for Inputs (parameters/timestamps) and Outputs (results/shocked values) to ensure traceability.
-* **`db/repo.py` (Database Access)**: Encapsulates database operations, including single record logging and bulk inserts for surface data. This prevents logic layers from depending on ORM details.
+* **`db/models.py` (Database Models)**:
+  Defines the persistent schema for Inputs (parameters/timestamps) and Outputs (results/shocked values) to ensure traceability.
+* **`db/repo.py` (Database Access)**:
+  Encapsulates database operations, including single record logging and bulk inserts for surface data. This prevents logic layers from depending on ORM details.
 
 ### 4. Interface & Quality Assurance
-* **`app_streamlit.py` (Streamlit App)**: An interactive visualization interface that collects user input, triggers validation, and renders heatmaps.
-* **`cli.py` (Command-Line Interface)**: A thin orchestration layer for terminal-based parameter parsing and price display with no internal business logic.
-* **`tests/` (Verification)**: Ensures stability through pricing accuracy benchmarks, property tests (put-call parity), and database consistency checks.
+* **`app_streamlit.py` (Streamlit App)**:
+  An interactive visualization interface that collects user input, triggers validation, and renders heatmaps.
+* **`cli.py` (Command-Line Interface)**:
+  A thin orchestration layer for terminal-based parameter parsing and price display with no internal business logic.
+* **`tests/` (Verification)**:
+  Ensures stability through pricing accuracy benchmarks, property tests (put-call parity), and database consistency checks.
 
 ## Technical Architecture Overview
 
