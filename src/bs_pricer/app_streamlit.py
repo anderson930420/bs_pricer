@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 from bs_pricer.config import DEFAULT_PARAMS, UI_CONFIG, GRID_CONFIG
-from bs_pricer.validation import price_checked
 from bs_pricer.surface import value_surface
+from bs_pricer.validation import price_checked
+
+from bs_pricer.portfolio.models import InstrumentId, Side, Trade
+from bs_pricer.portfolio.pnl import InventoryError, apply_trades_fifo, unrealized_pnl_from_lots
 
 
 def _slider_float(key: str) -> float:
@@ -49,6 +55,35 @@ def _heatmap_dataframe(matrix: list[list[float]], sigma_axis: tuple[float, ...],
     df.index.name = "Volatility"
     df.columns.name = "Spot Price"
     return df
+
+
+def _parse_ts_utc(s: str) -> datetime:
+    # Expect ISO8601; accept trailing "Z"
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is None:
+        raise ValueError("ts_utc must be timezone-aware (include 'Z' or offset)")
+    return dt.astimezone(timezone.utc)
+
+
+def _parse_trade(obj: dict) -> Trade:
+    inst = InstrumentId(str(obj["instrument_id"]))
+    ts = _parse_ts_utc(str(obj["ts_utc"]))
+    side = Side(str(obj["side"]))
+    qty = float(obj["qty"])
+    price = float(obj["price"])
+    fees = float(obj.get("fees", 0.0))
+    return Trade(
+        instrument_id=inst,
+        ts_utc=ts,
+        side=side,
+        qty=qty,
+        price=price,
+        fees=fees,
+        venue=obj.get("venue"),
+        trade_id=obj.get("trade_id"),
+    )
 
 
 def main() -> None:
@@ -108,6 +143,111 @@ def main() -> None:
         st.error(f"Input error: {err_msg}")
         st.stop()
 
+    # ---- PnL Panel (FIFO, mark selectable) ----
+    st.divider()
+    st.subheader("PnL (FIFO)")
+    st.caption(
+        "Compute FIFO PnL from trades using a selected mark price. "
+        "Trades are not persisted in this version."
+    )
+
+    mark_choice = st.radio(
+        "Mark price source",
+        options=("Use CALL price", "Use PUT price", "Custom mark"),
+        horizontal=True,
+    )
+
+    if mark_choice == "Use CALL price":
+        mark_price = call_px
+    elif mark_choice == "Use PUT price":
+        mark_price = put_px
+    else:
+        mark_price = float(
+            st.number_input(
+                "Custom mark price",
+                value=12.3456,
+                step=0.0001,
+                format="%.6f",
+                help="Manual mark for sanity-checking FIFO PnL (no unit enforcement in this UI layer).",
+            )
+        )
+
+    default_trades_json = [
+        {
+            "instrument_id": "AAPL",
+            "ts_utc": "2026-01-01T00:00:00Z",
+            "side": "BUY",
+            "qty": 1.0,
+            "price": 90.0,
+            "fees": 0.0,
+        },
+        {
+            "instrument_id": "AAPL",
+            "ts_utc": "2026-01-02T00:00:00Z",
+            "side": "SELL",
+            "qty": 0.5,
+            "price": 95.0,
+            "fees": 0.0,
+        },
+    ]
+
+    trades_text = st.text_area(
+        "Trades (JSON list)",
+        value=json.dumps(default_trades_json, indent=2),
+        height=220,
+    )
+
+    pnl_cols = st.columns(3, gap="large")
+
+    try:
+        raw = json.loads(trades_text)
+        if not isinstance(raw, list) or len(raw) == 0:
+            raise ValueError("Trades JSON must be a non-empty list")
+
+        trades = [_parse_trade(x) for x in raw]
+
+        lots, realized = apply_trades_fifo(trades)
+
+        unreal = 0.0
+        if lots:
+            unrealized = unrealized_pnl_from_lots(lots, mark_price=mark_price)
+            unreal = float(unrealized.unrealized)
+
+        net = float(realized.realized) + unreal
+
+        with pnl_cols[0]:
+            st.metric("Realized PnL", f"{realized.realized:,.4f}")
+            st.caption(f"Fees total: {realized.fees:,.4f}")
+
+        with pnl_cols[1]:
+            st.metric("Unrealized PnL", f"{unreal:,.4f}")
+            st.caption(f"Mark price: {mark_price:,.6f}")
+
+        with pnl_cols[2]:
+            st.metric("Net PnL", f"{net:,.4f}")
+
+        with st.expander("Open lots (FIFO inventory)"):
+            if not lots:
+                st.write("No open lots.")
+            else:
+                st.dataframe(
+                    [
+                        {
+                            "ts_utc": lot.ts_utc.isoformat(),
+                            "qty": lot.qty,
+                            "cost_per_unit": lot.cost_per_unit,
+                            "source_trade_id": lot.source_trade_id,
+                        }
+                        for lot in lots
+                    ],
+                    use_container_width=True,
+                )
+
+    except InventoryError as e:
+        st.error(f"Inventory error (FIFO): {e}")
+    except Exception as e:
+        st.error(f"PnL input error: {e}")
+
     # ---- Surface / Heatmaps ----
     st.header("Options Price - Interactive Heatmap")
     st.caption("Explore how option prices fluctuate with varying Spot Prices and Volatility, while holding Strike constant.")
@@ -126,7 +266,6 @@ def main() -> None:
         K=K,
         T=T,
         r=r,
-        # engine default is price_checked (in your surface module), keep it explicit for clarity:
         engine=price_checked,
     )
 
@@ -142,7 +281,6 @@ def main() -> None:
         x = [f"{c:.2f}" for c in df.columns.astype(float)]
         y = [f"{i:.2f}" for i in df.index.astype(float)]
 
-        # plotly FF annotated heatmap wants Python lists
         z_list = z.tolist()
         annotation_text = None
         if show_cell_values:
@@ -174,7 +312,6 @@ def main() -> None:
         st.subheader("Put Price Heatmap")
         st.plotly_chart(make_heatmap(put_df, "PUT"), use_container_width=True)
 
-    # Optional: show the underlying tables (debug / transparency)
     with st.expander("Show raw matrices (debug)"):
         st.write("Call matrix")
         st.dataframe(call_df)
