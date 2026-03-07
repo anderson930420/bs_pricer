@@ -46,7 +46,7 @@ My goal was to build something that reflects how I like to structure quantitativ
 - make the project easy to demo through a web app
 
 So while this is still a learning-oriented project, I designed it with modularity and future extension in mind.
-
+Last but not least, I tried to practice and push my limits while making this project.
 ---
 
 ## Current features
@@ -87,6 +87,7 @@ The app includes a trade-based PnL section where the user can:
 
 ## Project structure
 
+```text
 bs_pricer/
 ├─ src/
 │  └─ bs_pricer/
@@ -103,6 +104,7 @@ bs_pricer/
 ├─ pyproject.toml
 ├─ requirements.txt
 └─ README.md
+```
 
 ---
 
@@ -160,20 +162,26 @@ streamlit run streamlit_app.py
 
 ```
 
-## How to use the app
+### How to use the app
 
 The app supports three main workflows:
 
-## 1. Single-option pricing
+### 1. Single-option pricing
 - Enter spot, strike, volatility, time to expiry, and risk-free rate to compute Black-Scholes call and put prices.
 
-## 2. Heatmap exploration
+### 2. Heatmap exploration
 - Adjust the spot and volatility ranges to visualize how call and put values change across different scenarios.
 
-## 3. FIFO PnL analysis
+### 3. FIFO PnL analysis
 - Paste a JSON list of trades, choose a mark price, and inspect realized PnL, unrealized PnL, net PnL, and remaining inventory.
 
-## 4. Example JSON for the PnL panel
+### 4. Example JSON for the PnL panel
+
+In this example:
+
+- the first two trades create a long position
+- the sell trade closes the earliest open lots under FIFO
+- any remaining position stays open and is valued using the selected mark price
 
 ```json
 [
@@ -181,3 +189,23 @@ The app supports three main workflows:
   {"side": "BUY", "qty": 1, "price": 12.0, "ts": "2026-01-01T10:00:00"},
   {"side": "SELL", "qty": 2, "price": 15.0, "ts": "2026-01-02T11:00:00"}
 ]
+
+```
+
+## Testing
+
+Run the test suite with:
+
+```bash
+pytest tests/
+
+```
+
+## Roadmap
+
+Planned next steps for this project include:
+
+- adding Greeks as first-class outputs
+- supporting implied volatility calculations
+- expanding automated test coverage
+- improving packaging and CLI support
