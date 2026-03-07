@@ -1,3 +1,11 @@
+"""
+Streamlit Cloud entrypoint.
+
+This thin wrapper exists so the deployed app can be launched from the
+repository root while the actual application logic lives inside the
+`src/bs_pricer` package.
+"""
+
 from __future__ import annotations
 
 import sys
