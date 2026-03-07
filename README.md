@@ -162,7 +162,7 @@ streamlit run streamlit_app.py
 
 ```
 
-### How to use the app
+## How to use the app
 
 The app supports three main workflows:
 
