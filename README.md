@@ -46,7 +46,9 @@ My goal was to build something that reflects how I like to structure quantitativ
 - make the project easy to demo through a web app
 
 So while this is still a learning-oriented project, I designed it with modularity and future extension in mind.
+
 Last but not least, I tried to practice and push my limits while making this project.
+
 ---
 
 ## Current features
@@ -175,7 +177,7 @@ The app supports three main workflows:
 ### 3. FIFO PnL analysis
 - Paste a JSON list of trades, choose a mark price, and inspect realized PnL, unrealized PnL, net PnL, and remaining inventory.
 
-### 4. Example JSON for the PnL panel
+### Example JSON for the PnL panel
 
 In this example:
 
