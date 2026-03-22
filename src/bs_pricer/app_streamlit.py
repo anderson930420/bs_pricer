@@ -278,8 +278,10 @@ def main() -> None:
 
     def make_heatmap(df: pd.DataFrame, title: str) -> go.Figure:
         z = df.values
-        x = [f"{c:.2f}" for c in df.columns.astype(float)]
-        y = [f"{i:.2f}" for i in df.index.astype(float)]
+        x = df.columns.astype(float).tolist()
+        y = df.index.astype(float).tolist()
+        x_labels = [f"{c:.2f}" for c in x]
+        y_labels = [f"{i:.2f}" for i in y]
 
         z_list = z.tolist()
         annotation_text = None
@@ -299,6 +301,16 @@ def main() -> None:
             xaxis_title="Spot Price",
             yaxis_title="Volatility",
             margin=dict(l=40, r=20, t=60, b=40),
+        )
+        fig.update_xaxes(
+            tickmode="array",
+            tickvals=x,
+            ticktext=x_labels,
+        )
+        fig.update_yaxes(
+            tickmode="array",
+            tickvals=y,
+            ticktext=y_labels,
         )
         return fig
 
