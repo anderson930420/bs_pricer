@@ -120,6 +120,40 @@ def main() -> None:
     n_spot = int(st.sidebar.slider("Spot grid points", min_value=5, max_value=60, value=n_spot_default, step=1))
     n_vol = int(st.sidebar.slider("Vol grid points", min_value=5, max_value=60, value=n_vol_default, step=1))
 
+    heatmap_mode = st.sidebar.radio(
+        "Heatmap Mode",
+        options=("Price", "PnL"),
+        horizontal=True,
+    )
+
+    entry_price = None
+    quantity = None
+    position_direction = None
+    if heatmap_mode == "PnL":
+        entry_price = float(
+            st.sidebar.number_input(
+                "Entry Price",
+                min_value=0.0,
+                value=10.0,
+                step=0.01,
+                format="%.4f",
+            )
+        )
+        quantity = float(
+            st.sidebar.number_input(
+                "Quantity",
+                min_value=0.0,
+                value=1.0,
+                step=1.0,
+                format="%.4f",
+            )
+        )
+        position_direction = st.sidebar.radio(
+            "Position Direction",
+            options=("Long", "Short"),
+            horizontal=True,
+        )
+
     show_cell_values = st.sidebar.toggle("Annotate heatmap values", value=True)
     decimals = int(st.sidebar.slider("Annotation decimals", min_value=0, max_value=4, value=2, step=1))
 
@@ -249,8 +283,11 @@ def main() -> None:
         st.error(f"PnL input error: {e}")
 
     # ---- Surface / Heatmaps ----
-    st.header("Options Price - Interactive Heatmap")
-    st.caption("Explore how option prices fluctuate with varying Spot Prices and Volatility, while holding Strike constant.")
+    st.header("Options Heatmap")
+    if heatmap_mode == "Price":
+        st.caption("Explore how option prices fluctuate with varying Spot Prices and Volatility, while holding Strike constant.")
+    else:
+        st.caption("Explore option PnL across the same Spot Price and Volatility grid using the current surface, entry price, quantity, and position direction.")
 
     # Build axes
     try:
@@ -269,14 +306,54 @@ def main() -> None:
         engine=price_checked,
     )
 
-    call_df = _heatmap_dataframe(vs.call.tolist(), sigma_axis=sigma_axis, S_axis=S_axis)
-    put_df = _heatmap_dataframe(vs.put.tolist(), sigma_axis=sigma_axis, S_axis=S_axis)
+    if heatmap_mode == "Price":
+        call_matrix = vs.call
+        put_matrix = vs.put
+        colorbar_title = "Option Value"
+        call_heatmap_kwargs: dict[str, object] = {"colorscale": "Blues"}
+        put_heatmap_kwargs: dict[str, object] = {"colorscale": "Oranges"}
+        left_chart_label = "Call Price Heatmap"
+        right_chart_label = "Put Price Heatmap"
+        debug_call_label = "Call price matrix"
+        debug_put_label = "Put price matrix"
+    else:
+        assert entry_price is not None
+        assert quantity is not None
+        assert position_direction is not None
+        direction_sign = 1.0 if position_direction == "Long" else -1.0
+        pnl_scale = direction_sign * quantity
+        call_matrix = (vs.call - entry_price) * pnl_scale
+        put_matrix = (vs.put - entry_price) * pnl_scale
+        colorbar_title = "PnL"
+        pnl_bound = float(max(np.abs(call_matrix).max(), np.abs(put_matrix).max(), 0.0))
+        if pnl_bound == 0.0:
+            pnl_bound = 1.0
+        pnl_heatmap_kwargs = {
+            "colorscale": [
+                (0.0, "#7f0000"),
+                (0.2, "#d7301f"),
+                (0.5, "#f7f7f7"),
+                (0.8, "#1a9850"),
+                (1.0, "#00441b"),
+            ],
+            "zmin": -pnl_bound,
+            "zmax": pnl_bound,
+        }
+        left_chart_label = "Call PnL Heatmap"
+        right_chart_label = "Put PnL Heatmap"
+        debug_call_label = "Call PnL matrix"
+        debug_put_label = "Put PnL matrix"
+        call_heatmap_kwargs = pnl_heatmap_kwargs
+        put_heatmap_kwargs = pnl_heatmap_kwargs
+
+    call_df = _heatmap_dataframe(call_matrix.tolist(), sigma_axis=sigma_axis, S_axis=S_axis)
+    put_df = _heatmap_dataframe(put_matrix.tolist(), sigma_axis=sigma_axis, S_axis=S_axis)
 
     # Use plotly for annotated heatmap; Streamlit renders nicely.
     import plotly.figure_factory as ff  # local import to keep import-time light
     import plotly.graph_objects as go
 
-    def make_heatmap(df: pd.DataFrame, title: str) -> go.Figure:
+    def make_heatmap(df: pd.DataFrame, title: str, heatmap_kwargs: dict[str, object]) -> go.Figure:
         z = df.values
         x = df.columns.astype(float).tolist()
         y = df.index.astype(float).tolist()
@@ -295,6 +372,8 @@ def main() -> None:
             annotation_text=annotation_text,
             showscale=True,
             hoverinfo="z",
+            colorbar=dict(title=colorbar_title),
+            **heatmap_kwargs,
         )
         fig.update_layout(
             title=title,
@@ -302,6 +381,10 @@ def main() -> None:
             yaxis_title="Volatility",
             margin=dict(l=40, r=20, t=60, b=40),
         )
+        if heatmap_mode == "PnL" and show_cell_values:
+            neutral_threshold = 0.15 * float(heatmap_kwargs["zmax"])
+            for annotation, value in zip(fig.layout.annotations, z.flatten(), strict=False):
+                annotation.font.color = "#111111" if abs(float(value)) <= neutral_threshold else "#FFFFFF"
         fig.update_xaxes(
             tickmode="array",
             tickvals=x,
@@ -317,17 +400,17 @@ def main() -> None:
     hm_cols = st.columns(2, gap="large")
 
     with hm_cols[0]:
-        st.subheader("Call Price Heatmap")
-        st.plotly_chart(make_heatmap(call_df, "CALL"), use_container_width=True)
+        st.subheader(left_chart_label)
+        st.plotly_chart(make_heatmap(call_df, "CALL", call_heatmap_kwargs), use_container_width=True)
 
     with hm_cols[1]:
-        st.subheader("Put Price Heatmap")
-        st.plotly_chart(make_heatmap(put_df, "PUT"), use_container_width=True)
+        st.subheader(right_chart_label)
+        st.plotly_chart(make_heatmap(put_df, "PUT", put_heatmap_kwargs), use_container_width=True)
 
     with st.expander("Show raw matrices (debug)"):
-        st.write("Call matrix")
+        st.write(debug_call_label)
         st.dataframe(call_df)
-        st.write("Put matrix")
+        st.write(debug_put_label)
         st.dataframe(put_df)
 
 
