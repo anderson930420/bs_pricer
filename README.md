@@ -1,213 +1,251 @@
 # Black-Scholes Pricer
 
-A modular Black-Scholes option pricing project built with Python and Streamlit.
+A small, modular Black-Scholes pricing project built with Python and Streamlit.
 
-This project started as a learning-focused pricing engine and gradually evolved into a small analytics app with:
+It combines a validated pricing engine, interactive heatmaps, and FIFO trade-based PnL tooling in a `src/`-layout codebase that is easy to run locally and straightforward to extend.
 
-- Black-Scholes call/put pricing
-- input validation
-- option price heatmaps across spot and volatility
-- FIFO PnL calculation from user-provided trades
-- a clean `src/` package layout for maintainability
-- a root-level Streamlit entrypoint for deployment
+## Overview
 
----
+This repository models European call and put option prices with the Black-Scholes formula and exposes that logic through:
+
+- a Streamlit app for interactive exploration
+- a reusable Python package under `src/bs_pricer`
+- a lightweight CLI entrypoint
+- automated tests for pricing, validation, surface generation, persistence, and UI import smoke coverage
+
+The app is designed for quick intuition-building:
+
+- inspect single-point call and put prices
+- explore option value heatmaps across spot price and volatility
+- switch heatmaps between Price and PnL views
+- evaluate FIFO realized and unrealized PnL from user-provided JSON trades
 
 ## Live Demo
 
 [Open the Streamlit app](https://anderson930420-bs-pricer.streamlit.app/)
 
----
+## Features
 
-## What this project does
+- Black-Scholes European call and put pricing
+- validated pricing inputs before downstream computation
+- interactive Streamlit UI for pricing and scenario exploration
+- option value surfaces over spot price and volatility
+- Price / PnL heatmap toggle
+- PnL heatmaps derived directly from the option value surface
+- long / short position handling in PnL mode
+- intuitive heatmap color semantics:
+  - Price mode: Call = blue sequential scale, Put = orange sequential scale
+  - PnL mode: red = loss, neutral = near break-even, green = profit
+- FIFO trade-based PnL panel from JSON input
+- `src/` package layout for cleaner separation of UI, pricing, portfolio, and persistence logic
+- root-level Streamlit deployment entrypoint via `streamlit_app.py`
 
-This app lets you interactively explore how European call and put prices change under the Black-Scholes model.
+## Heatmap Modes
 
-You can:
+The heatmap section uses the same spot-price and volatility grid in both modes.
 
-- adjust spot price, strike, volatility, time to expiry, and interest rate
-- compute call and put prices from validated inputs
-- visualize price surfaces as interactive heatmaps
-- paste a JSON list of trades and inspect FIFO realized / unrealized PnL
-- use the app in the browser through Streamlit Cloud
+### Price mode
 
----
+Price mode shows option value magnitude only:
 
-## Why I built it
+- Call heatmap uses a blue sequential palette
+- Put heatmap uses an orange sequential palette
+- deeper color means higher option price
 
-I wanted this project to be more than a single pricing formula script.
+### PnL mode
 
-My goal was to build something that reflects how I like to structure quantitative Python projects:
+PnL mode reuses the same value surface and applies:
 
-- separate validation from pricing logic
-- keep the pricing engine small and reusable
-- isolate batch surface generation from UI code
-- use a package layout that can grow over time
-- make the project easy to demo through a web app
+```text
+PnL = (current option value - entry price) * quantity
+```
 
-So while this is still a learning-oriented project, I designed it with modularity and future extension in mind.
+with position direction applied as:
 
-Last but not least, I tried to practice and push my limits while making this project.
+- `Long` = positive exposure to price changes
+- `Short` = sign-inverted PnL
 
----
+The PnL heatmaps use a zero-centered diverging colorscale:
 
-## Current features
+- red for losses
+- neutral near break-even
+- green for profits
 
-### 1. Core pricing engine
-The core pricing logic computes Black-Scholes European call and put prices from the standard closed-form model.
+## App Workflows
 
-### 2. Validation layer
-Inputs are validated before pricing so that the UI and downstream logic do not need to directly handle malformed numerical inputs.
+### 1. Single-option pricing
 
-### 3. Interactive Streamlit app
-The Streamlit interface provides:
+Use the sidebar inputs to price one European call and one European put at the current parameter set:
 
-- parameter sliders
-- point pricing output
-- heatmap controls
-- FIFO PnL inputs via JSON
-- interactive charts and tables
+- Spot price
+- Strike price
+- Time to maturity
+- Volatility
+- Risk-free rate
 
-### 4. Option price heatmaps
-The app generates call and put value surfaces over ranges of:
+### 2. Heatmap exploration
 
-- spot price
-- volatility
+Adjust the heatmap grid to evaluate option values or PnL across:
 
-This makes it easier to build intuition about sensitivity to market conditions.
+- spot price range
+- volatility range
+- grid density
 
-### 5. FIFO PnL panel
-The app includes a trade-based PnL section where the user can:
+This is useful for comparing how call and put behavior changes under different scenarios while keeping strike, rate, and maturity fixed.
 
-- paste trade data in JSON format
-- select a mark price
-- compute realized PnL
-- compute unrealized PnL from remaining lots
-- inspect open FIFO inventory
+### 3. FIFO PnL panel
 
----
+Paste a JSON list of trades into the Streamlit app to inspect:
 
-## Project structure
+- realized PnL
+- unrealized PnL
+- total net PnL
+- remaining FIFO lots
+
+The panel supports selectable mark pricing using the current call value, current put value, or a custom mark.
+
+## FIFO PnL Panel
+
+The FIFO section is separate from the heatmap PnL view.
+
+- Heatmap PnL is scenario-based and derived from the option value surface.
+- FIFO PnL is trade-based and derived from the JSON trade list plus a chosen mark price.
+
+Example JSON input:
+
+```json
+[
+  {
+    "instrument_id": "AAPL",
+    "ts_utc": "2026-01-01T00:00:00Z",
+    "side": "BUY",
+    "qty": 1.0,
+    "price": 90.0,
+    "fees": 0.0
+  },
+  {
+    "instrument_id": "AAPL",
+    "ts_utc": "2026-01-02T00:00:00Z",
+    "side": "SELL",
+    "qty": 0.5,
+    "price": 95.0,
+    "fees": 0.0
+  }
+]
+```
+
+## Project Structure
 
 ```text
 bs_pricer/
 ├─ src/
 │  └─ bs_pricer/
+│     ├─ __init__.py
+│     ├─ __main__.py
 │     ├─ app_streamlit.py
 │     ├─ config.py
 │     ├─ pricing.py
 │     ├─ surface.py
 │     ├─ validation.py
-│     ├─ portfolio/
 │     ├─ db/
+│     ├─ portfolio/
 │     └─ service/
 ├─ tests/
+│  ├─ cli/
+│  ├─ db/
+│  ├─ portfolio/
+│  ├─ service/
+│  └─ ui/
 ├─ streamlit_app.py
 ├─ pyproject.toml
 ├─ requirements.txt
 └─ README.md
 ```
 
----
+### Key files
 
-## What each part is responsible for
-
-- `pricing.py`  
-  Core Black-Scholes pricing logic.
-
-- `validation.py`  
-  Input checks and safe entry points before pricing.
-
-- `surface.py`  
-  Batch evaluation over spot/volatility grids for visualization.
-
-- `app_streamlit.py`  
-  Main Streamlit application logic and UI orchestration.
-
-- `portfolio/`  
-  FIFO trade and PnL-related logic.
-
-- `db/`  
-  Database-related components for persistence and traceability.
-
-- `service/`  
-  Application-level orchestration and higher-level flow.
-
-- `streamlit_app.py`  
-  Thin deployment wrapper used as the root entrypoint for Streamlit Cloud.
-
----
+- `src/bs_pricer/pricing.py`
+  Black-Scholes pricing logic.
+- `src/bs_pricer/validation.py`
+  Input validation and safe pricing entrypoints.
+- `src/bs_pricer/surface.py`
+  Value-surface generation across spot/volatility grids.
+- `src/bs_pricer/app_streamlit.py`
+  Main Streamlit app UI and heatmap logic.
+- `src/bs_pricer/portfolio/`
+  FIFO inventory and PnL logic.
+- `src/bs_pricer/db/`
+  SQLite persistence models and repository code.
+- `src/bs_pricer/service/`
+  Higher-level service orchestration for pricing and replay flows.
+- `streamlit_app.py`
+  Root Streamlit entrypoint used for deployment.
 
 ## Installation
 
-Clone the repository:
+Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/anderson930420/bs_pricer.git
 cd bs_pricer
-
-```
-
-Install dependencies:
-
-```bash
 pip install -r requirements.txt
-
 ```
 
-## Run locally
+## Run Locally
 
 Launch the Streamlit app from the repository root:
 
 ```bash
 streamlit run streamlit_app.py
-
 ```
 
-## How to use the app
+The deployed app entrypoint is the same root file:
 
-The app supports three main workflows:
+```text
+streamlit_app.py
+```
 
-### 1. Single-option pricing
-- Enter spot, strike, volatility, time to expiry, and risk-free rate to compute Black-Scholes call and put prices.
+There is also a package CLI entrypoint:
 
-### 2. Heatmap exploration
-- Adjust the spot and volatility ranges to visualize how call and put values change across different scenarios.
-
-### 3. FIFO PnL analysis
-- Paste a JSON list of trades, choose a mark price, and inspect realized PnL, unrealized PnL, net PnL, and remaining inventory.
-
-### Example JSON for the PnL panel
-
-In this example:
-
-- the first two trades create a long position
-- the sell trade closes the earliest open lots under FIFO
-- any remaining position stays open and is valued using the selected mark price
-
-```json
-[
-  {"side": "BUY", "qty": 2, "price": 10.0, "ts": "2026-01-01T09:30:00"},
-  {"side": "BUY", "qty": 1, "price": 12.0, "ts": "2026-01-01T10:00:00"},
-  {"side": "SELL", "qty": 2, "price": 15.0, "ts": "2026-01-02T11:00:00"}
-]
-
+```bash
+python -m bs_pricer price --S 100 --K 100 --sigma 0.2 --T 1.0 --r 0.05 --no-persist
 ```
 
 ## Testing
 
-Run the test suite with:
+Run the full test suite from the repository root:
 
 ```bash
-pytest tests/
-
+pytest
 ```
+
+The test suite currently covers:
+
+- pricing behavior
+- validation policy
+- value surface generation
+- FIFO portfolio logic
+- SQLite repository behavior
+- pricing service flows
+- CLI smoke tests
+- Streamlit app import smoke test
+
+## Why This Project
+
+This project is a compact way to show a few engineering habits in one place:
+
+- separating core pricing logic from UI concerns
+- validating inputs at the application boundary
+- reusing the same value surface for multiple visual workflows
+- keeping the code organized under a maintainable `src/` layout
+- pairing quantitative logic with a practical interface
 
 ## Roadmap
 
-Planned next steps for this project include:
+Potential next steps for the project:
 
-- adding Greeks as first-class outputs
-- supporting implied volatility calculations
-- expanding automated test coverage
-- improving packaging and CLI support
+- Greeks as first-class outputs in the UI and CLI
+- implied volatility calculations
+- richer historical run exploration on top of the SQLite layer
+- more targeted UI and visualization tests
+- packaging and release polish
