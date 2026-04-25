@@ -1,30 +1,33 @@
-from . import pricing
+from __future__ import annotations
+
 import math
-# validation.py (module level)
+import numbers
+
+from . import pricing
+
+
+def _is_finite_real_number(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    if not isinstance(value, numbers.Real):
+        return False
+    return math.isfinite(float(value))
+
+
+def _require_finite_real_number(name: str, value: object) -> None:
+    if isinstance(value, bool) or not isinstance(value, numbers.Real):
+        raise TypeError(f"{name} must be a number")
+    if not _is_finite_real_number(value):
+        raise ValueError(f"{name} is not finite")
+
 
 def _validate_numbers(S, K, sigma, T, r):
     # 檢查 type + NaN/inf（重點：NaN/inf）
-    if not isinstance(S, (int, float)):
-        raise TypeError("S must be a number")
-    if not isinstance(K, (int, float)):
-        raise TypeError("K must be a number")
-    if not isinstance(sigma, (int, float)):
-        raise TypeError("sigma must be a number")
-    if not isinstance(T, (int, float)):
-        raise TypeError("T must be a number")
-    if not isinstance(r, (int, float)):
-        raise TypeError("r must be a number")
-
-    if not math.isfinite(S):
-        raise ValueError("S is not finite")
-    if not math.isfinite(K):
-        raise ValueError("K is not finite")
-    if not math.isfinite(sigma):
-        raise ValueError("sigma is not finite")
-    if not math.isfinite(T):
-        raise ValueError("T is not finite")
-    if not math.isfinite(r):
-        raise ValueError("r is not finite")
+    _require_finite_real_number("S", S)
+    _require_finite_real_number("K", K)
+    _require_finite_real_number("sigma", sigma)
+    _require_finite_real_number("T", T)
+    _require_finite_real_number("r", r)
 
 def _validate_domain(S, K, sigma, T, r):
     # S > 0, K > 0

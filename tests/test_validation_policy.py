@@ -1,5 +1,12 @@
+import ast
 import math
+
+from pathlib import Path
+
+import numpy as np
 import pytest
+
+from bs_pricer import validation as validation_module
 from bs_pricer.validation import price_checked
 
 def test_reject_zero_S():
@@ -53,6 +60,57 @@ def test_reject_infinite_inputs():
 
     with pytest.raises(ValueError):
         price_checked(100, 100, 0.2, 1.0, math.inf)
+
+
+def test_accepts_numpy_scalar_numbers() -> None:
+    result = price_checked(
+        np.float64(120.0),
+        np.int64(100),
+        np.float64(0.2),
+        np.float64(1.0),
+        np.float64(0.05),
+    )
+
+    baseline = price_checked(120.0, 100.0, 0.2, 1.0, 0.05)
+
+    assert result["call"] == pytest.approx(baseline["call"])
+    assert result["put"] == pytest.approx(baseline["put"])
+
+
+def test_rejects_bool_string_and_non_real_inputs() -> None:
+    with pytest.raises(TypeError):
+        price_checked(True, 100, 0.2, 1.0, 0.05)
+
+    with pytest.raises(TypeError):
+        price_checked(100, "100", 0.2, 1.0, 0.05)
+
+    with pytest.raises(TypeError):
+        price_checked(100, 100, object(), 1.0, 0.05)
+
+
+def test_validation_helper_uses_bool_first_real_then_finite_order() -> None:
+    source = Path(validation_module.__file__).read_text()
+    tree = ast.parse(source)
+
+    helper = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_is_finite_real_number"
+    )
+
+    first_if = helper.body[0]
+    second_if = helper.body[1]
+    third_stmt = helper.body[2]
+
+    assert isinstance(first_if, ast.If)
+    assert isinstance(second_if, ast.If)
+    assert isinstance(third_stmt, ast.Return)
+    assert "bool" in ast.unparse(first_if.test)
+    assert "numbers.Real" in ast.unparse(second_if.test)
+    assert "math.isfinite(float(value))" in ast.unparse(third_stmt.value)
+
+    source_text = source.replace(" ", "")
+    assert "(int,float)" not in source_text
 
 def test_payoff_at_expiry_call_only():
     result = price_checked(120, 100, 0.2, 0.0, 0.05)
