@@ -2,13 +2,13 @@
 
 A modular Black-Scholes single-option risk analysis app built with Python and Streamlit.
 
-The project combines validated European call/put pricing, analytic Greeks, selected-option scenario analysis, first-order Greek price bridge decomposition, option value surfaces, and FIFO trade-based PnL tooling in a `src/`-layout codebase.
+The project combines validated European call/put pricing, analytic Greeks, selected-option scenario analysis, first-order Greek price bridge decomposition, payoff/value curves, option value surfaces, and FIFO trade-based PnL tooling in a `src/`-layout codebase.
 
 ## Overview
 
 This repository exposes the option model through:
 
-- a Streamlit app for interactive price, Greeks, scenario, surface, and FIFO PnL workflows
+- a Streamlit app for interactive price, Greeks, scenario, curve, surface, and FIFO PnL workflows
 - a reusable Python package under `src/bs_pricer`
 - a lightweight CLI entrypoint
 - automated tests for pricing, validation, Greeks, scenarios, surfaces, persistence, portfolio PnL, CLI behavior, and UI import smoke coverage
@@ -19,6 +19,7 @@ The app is designed for quick single-option risk intuition:
 - inspect Black-Scholes Greeks with market conventions
 - analyze a selected long call or long put under preset scenarios
 - decompose scenario repricing into delta, vega, theta, rho, first-order approximation, and residual
+- compare payoff at expiration with current theoretical value across a spot-price curve
 - explore option value and PnL heatmaps across spot price and volatility
 - evaluate FIFO realized and unrealized PnL from user-provided JSON trades
 
@@ -41,6 +42,7 @@ The app is designed for quick single-option risk intuition:
   - vega is displayed per volatility point as `vega * 0.01`
   - rho is displayed per rate point as `rho * 0.01`
 - selected-option scenario analysis for long call or long put
+- selected-option payoff and value curves
 - scenario presets for spot, volatility, time, and rate shifts
 - first-order Greek price bridge decomposition:
   - delta effect
@@ -104,6 +106,18 @@ For each preset scenario, the tab shows:
 - bridge table with delta, vega, theta, rho, first-order approximation, actual repricing change, and residual
 
 The bridge uses base-case Greeks. Vega and rho shifts are converted from points to decimal units before applying the bridge. The residual captures the portion of repricing not explained by first-order Greeks, including nonlinear effects such as gamma.
+
+### Payoff & Value Curves Tab
+
+The Payoff & Value Curves tab follows the current base option inputs and lets you inspect a selected call or put across a spot-price range.
+
+The chart shows:
+
+- payoff at expiration
+- current theoretical Black-Scholes value
+- curve data with intrinsic value and time value
+
+Time value is displayed as the difference between theoretical value and intrinsic value before expiry.
 
 ### Surfaces Tab
 
@@ -211,6 +225,7 @@ bs_pricer/
 │     ├─ _bs_core.py
 │     ├─ app_streamlit.py
 │     ├─ config.py
+│     ├─ curves.py
 │     ├─ greeks.py
 │     ├─ pricing.py
 │     ├─ scenario.py
@@ -241,6 +256,8 @@ bs_pricer/
   Black-Scholes scalar pricing logic.
 - `src/bs_pricer/greeks.py`
   Black-Scholes analytic Greeks and Greek dataclasses.
+- `src/bs_pricer/curves.py`
+  Payoff, intrinsic, time value, and checked theoretical value curve construction.
 - `src/bs_pricer/scenario.py`
   Scenario presets, input shifting, selected-option repricing, first-order bridge, and residual logic.
 - `src/bs_pricer/validation.py`

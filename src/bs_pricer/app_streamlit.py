@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from bs_pricer.config import DEFAULT_PARAMS, UI_CONFIG
+from bs_pricer.curves import build_payoff_value_curve
 from bs_pricer.scenario import SCENARIO_PRESETS, analyze_scenario, bridge_rows
 from bs_pricer.surface import value_surface
 from bs_pricer.surface_grid import surface_grid_config
@@ -180,7 +181,9 @@ def main() -> None:
         st.error(f"Input error: {err_msg}")
         st.stop()
 
-    price_tab, scenario_tab, surfaces_tab = st.tabs(["Price & Greeks", "Scenario Analysis", "Surfaces"])
+    price_tab, scenario_tab, curves_tab, surfaces_tab = st.tabs(
+        ["Price & Greeks", "Scenario Analysis", "Payoff & Value Curves", "Surfaces"]
+    )
 
     with price_tab:
         price_cols = st.columns(2, gap="large")
@@ -279,6 +282,111 @@ def main() -> None:
                 with result_cols[2]:
                     st.metric("First-order approximate change", "—")
                 st.info("Greeks unavailable for this base case")
+
+    with curves_tab:
+        st.header("Payoff & Value Curves")
+        st.caption("Compare payoff at expiration with current theoretical value across spot prices.")
+
+        curve_cols = st.columns([1, 1, 1, 1], gap="medium")
+        with curve_cols[0]:
+            curve_option = st.radio(
+                "Curve option",
+                options=("call", "put"),
+                index=0 if selected_option == "call" else 1,
+                format_func=lambda x: "Call" if x == "call" else "Put",
+                horizontal=True,
+                key="curve_option_type",
+            )
+        with curve_cols[1]:
+            curve_spot_min = float(
+                st.number_input(
+                    "Curve min spot",
+                    value=spot_min_default,
+                    step=1.0,
+                    key="curve_spot_min",
+                )
+            )
+        with curve_cols[2]:
+            curve_spot_max = float(
+                st.number_input(
+                    "Curve max spot",
+                    value=spot_max_default,
+                    step=1.0,
+                    key="curve_spot_max",
+                )
+            )
+        with curve_cols[3]:
+            curve_points = int(
+                st.slider(
+                    "Curve points",
+                    min_value=10,
+                    max_value=200,
+                    value=81,
+                    step=1,
+                    key="curve_points",
+                )
+            )
+
+        try:
+            curve = build_payoff_value_curve(
+                option_type=curve_option,
+                K=K,
+                T=T,
+                r=r,
+                sigma=sigma,
+                spot_min=curve_spot_min,
+                spot_max=curve_spot_max,
+                points=curve_points,
+            )
+        except (ValueError, TypeError) as e:
+            st.error(f"Curve input error: {e}")
+        else:
+            curve_df = pd.DataFrame(
+                [
+                    {
+                        "Spot": point.spot,
+                        "Payoff at expiration": point.payoff,
+                        "Current theoretical value": point.value,
+                        "Intrinsic value": point.intrinsic,
+                        "Time value": point.time_value,
+                    }
+                    for point in curve.points
+                ]
+            )
+
+            import plotly.graph_objects as go
+
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=curve_df["Spot"],
+                    y=curve_df["Current theoretical value"],
+                    mode="lines",
+                    name="Current theoretical value",
+                    line=dict(color="#2563eb", width=3),
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=curve_df["Spot"],
+                    y=curve_df["Payoff at expiration"],
+                    mode="lines",
+                    name="Payoff at expiration",
+                    line=dict(color="#111827", width=2, dash="dash"),
+                )
+            )
+            fig.update_layout(
+                title=f"{'Call' if curve.option_type == 'call' else 'Put'} payoff and value",
+                xaxis_title="Spot Price",
+                yaxis_title="Option Value",
+                hovermode="x unified",
+                margin=dict(l=40, r=20, t=60, b=40),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.caption("Time value is the gap between theoretical value and intrinsic value before expiry.")
+
+            with st.expander("Show curve data"):
+                st.dataframe(curve_df, use_container_width=True, hide_index=True)
 
     with surfaces_tab:
         st.header("Options Heatmap")
