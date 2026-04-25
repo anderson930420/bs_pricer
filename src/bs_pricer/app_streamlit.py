@@ -372,7 +372,7 @@ def main() -> None:
                     y=curve_df["Payoff at expiration"],
                     mode="lines",
                     name="Payoff at expiration",
-                    line=dict(color="#111827", width=2, dash="dash"),
+                    line=dict(color="#dc2626", width=2, dash="dash"),
                 )
             )
             fig.update_layout(

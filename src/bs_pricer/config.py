@@ -72,9 +72,9 @@ UI_CONFIG: Dict[str, Dict[str, Any]] = {
 GRID_CONFIG: Dict[str, Any] = {
     "SPOT_MIN_PCT": 0.5,  # Start grid at 50% of Spot Price
     "SPOT_MAX_PCT": 1.5,  # End grid at 150% of Spot Price
-    "SPOT_STEPS": 50,     # Number of steps for Spot axis
+    "SPOT_STEPS": 10,     # Number of steps for Spot axis
 
     "VOL_MIN": 0.05,      # Minimum volatility in grid
     "VOL_MAX": 0.50,      # Maximum volatility in grid
-    "VOL_STEPS": 20,      # Number of steps for Volatility axis
+    "VOL_STEPS": 10,      # Number of steps for Volatility axis
 }

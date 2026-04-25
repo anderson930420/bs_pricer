@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from bs_pricer.config import GRID_CONFIG
 from bs_pricer.surface_grid import surface_axes, surface_grid_config
 
 
@@ -26,6 +27,18 @@ def test_surface_grid_config_uses_canonical_keys() -> None:
     assert grid.vol_max == 0.4
     assert grid.spot_steps == 12
     assert grid.vol_steps == 7
+
+
+def test_default_surface_grid_is_10_by_10() -> None:
+    grid = surface_grid_config(spot_price=100.0)
+    spot_axis, sigma_axis = surface_axes(spot_price=100.0)
+
+    assert GRID_CONFIG["SPOT_STEPS"] == 10
+    assert GRID_CONFIG["VOL_STEPS"] == 10
+    assert grid.spot_steps == 10
+    assert grid.vol_steps == 10
+    assert len(spot_axis) == 10
+    assert len(sigma_axis) == 10
 
 
 def test_surface_grid_config_does_not_require_stale_keys() -> None:
