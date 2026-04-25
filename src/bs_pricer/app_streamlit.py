@@ -9,6 +9,7 @@ import streamlit as st
 
 from bs_pricer.config import DEFAULT_PARAMS, UI_CONFIG
 from bs_pricer.curves import build_payoff_value_curve
+from bs_pricer.implied_vol import solve_implied_volatility
 from bs_pricer.scenario import SCENARIO_PRESETS, analyze_scenario, bridge_rows
 from bs_pricer.surface import value_surface
 from bs_pricer.surface_grid import surface_grid_config
@@ -181,8 +182,8 @@ def main() -> None:
         st.error(f"Input error: {err_msg}")
         st.stop()
 
-    price_tab, scenario_tab, curves_tab, surfaces_tab = st.tabs(
-        ["Price & Greeks", "Scenario Analysis", "Payoff & Value Curves", "Surfaces"]
+    price_tab, implied_vol_tab, scenario_tab, curves_tab, surfaces_tab = st.tabs(
+        ["Price & Greeks", "Implied Volatility", "Scenario Analysis", "Payoff & Value Curves", "Surfaces"]
     )
 
     with price_tab:
@@ -213,6 +214,58 @@ def main() -> None:
                     }
                 )
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    with implied_vol_tab:
+        st.header("Implied Volatility")
+
+        iv_cols = st.columns([1, 1], gap="medium")
+        with iv_cols[0]:
+            iv_option = st.radio(
+                "Option type",
+                options=("call", "put"),
+                index=0 if selected_option == "call" else 1,
+                format_func=lambda x: "Call" if x == "call" else "Put",
+                horizontal=True,
+                key="iv_option_type",
+            )
+        default_market_price = call_px if iv_option == "call" else put_px
+        with iv_cols[1]:
+            market_option_price = float(
+                st.number_input(
+                    "Market option price",
+                    min_value=0.0,
+                    value=float(default_market_price),
+                    step=0.01,
+                    format="%.6f",
+                )
+            )
+
+        try:
+            iv_result = solve_implied_volatility(
+                option_type=iv_option,
+                market_price=market_option_price,
+                S=S,
+                K=K,
+                T=T,
+                r=r,
+            )
+        except (ValueError, TypeError) as e:
+            st.error(f"Implied volatility error: {e}")
+        else:
+            metric_cols = st.columns(4, gap="large")
+            with metric_cols[0]:
+                st.metric("Implied volatility", f"{iv_result.implied_volatility * 100.0:,.4f}%")
+            with metric_cols[1]:
+                st.metric("Model price at solved volatility", f"${iv_result.model_price:,.6f}")
+            with metric_cols[2]:
+                st.metric("Price error", f"{iv_result.price_error:,.6g}")
+            with metric_cols[3]:
+                st.metric("Iterations", f"{iv_result.iterations}")
+
+            st.caption(
+                f"Valid price range for this {iv_result.option_type}: "
+                f"[{iv_result.lower_bound:,.6f}, {iv_result.upper_bound:,.6f})"
+            )
 
     with scenario_tab:
         base_price = call_px if selected_option == "call" else put_px

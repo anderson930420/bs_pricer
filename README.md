@@ -2,13 +2,13 @@
 
 A modular Black-Scholes single-option risk analysis app built with Python and Streamlit.
 
-The project combines validated European call/put pricing, analytic Greeks, selected-option scenario analysis, first-order Greek price bridge decomposition, payoff/value curves, option value surfaces, and FIFO trade-based PnL tooling in a `src/`-layout codebase.
+The project combines validated European call/put pricing, single-option Black-Scholes implied volatility solving, analytic Greeks, selected-option scenario analysis, first-order Greek price bridge decomposition, payoff/value curves, option value surfaces, and FIFO trade-based PnL tooling in a `src/`-layout codebase.
 
 ## Overview
 
 This repository exposes the option model through:
 
-- a Streamlit app for interactive price, Greeks, scenario, curve, surface, and FIFO PnL workflows
+- a Streamlit app for interactive price, implied volatility, Greeks, scenario, curve, surface, and FIFO PnL workflows
 - a reusable Python package under `src/bs_pricer`
 - a lightweight CLI entrypoint
 - automated tests for pricing, validation, Greeks, scenarios, surfaces, persistence, portfolio PnL, CLI behavior, and UI import smoke coverage
@@ -16,6 +16,7 @@ This repository exposes the option model through:
 The app is designed for quick single-option risk intuition:
 
 - inspect call and put prices
+- solve a single call or put implied volatility from a market option price
 - inspect Black-Scholes Greeks with market conventions
 - analyze a selected long call or long put under preset scenarios
 - decompose scenario repricing into delta, vega, theta, rho, first-order approximation, and residual
@@ -30,6 +31,7 @@ The app is designed for quick single-option risk intuition:
 ## Features
 
 - Black-Scholes European call and put pricing
+- single-option implied volatility solver for European calls and puts under the current no-dividend Black-Scholes model
 - validated pricing inputs before downstream computation
 - Black-Scholes Greeks as first-class outputs:
   - delta
@@ -56,7 +58,7 @@ The app is designed for quick single-option risk intuition:
 - PnL heatmaps derived directly from the option value surface
 - long / short position handling in PnL mode
 - FIFO trade-based PnL panel from JSON input
-- `src/` package layout for separation of scalar math, pricing, validation, Greeks, scenarios, surfaces, UI, portfolio, and persistence logic
+- `src/` package layout for separation of scalar math, pricing, validation, implied volatility, Greeks, scenarios, surfaces, UI, portfolio, and persistence logic
 - root-level Streamlit deployment entrypoint via `streamlit_app.py`
 
 ## App Usage
@@ -91,6 +93,20 @@ Greeks use these conventions:
 - rho is `dV/dr`, where rate is a decimal such as `0.05`
 
 The UI also shows daily theta, vega per volatility point, and rho per rate point. If time to expiry is zero or volatility is zero, prices remain available but analytic Greeks are shown as unavailable.
+
+### Implied Volatility Tab
+
+The Implied Volatility tab uses the current base spot, strike, time to maturity, and risk-free rate inputs. Select call or put, enter a market option price, and the app solves the volatility that reproduces that price under the same Black-Scholes model.
+
+The tab shows:
+
+- implied volatility as a percentage
+- model price at solved volatility
+- price error
+- solver iterations
+- valid price range for the selected option
+
+The solver validates no-arbitrage price bounds and rejects expiry because implied volatility is undefined when option value no longer depends uniquely on volatility.
 
 ### Scenario Analysis Tab
 
@@ -227,6 +243,7 @@ bs_pricer/
 │     ├─ config.py
 │     ├─ curves.py
 │     ├─ greeks.py
+│     ├─ implied_vol.py
 │     ├─ pricing.py
 │     ├─ scenario.py
 │     ├─ surface.py
@@ -256,6 +273,8 @@ bs_pricer/
   Black-Scholes scalar pricing logic.
 - `src/bs_pricer/greeks.py`
   Black-Scholes analytic Greeks and Greek dataclasses.
+- `src/bs_pricer/implied_vol.py`
+  Single-option implied volatility solver and solver diagnostics.
 - `src/bs_pricer/curves.py`
   Payoff, intrinsic, time value, and checked theoretical value curve construction.
 - `src/bs_pricer/scenario.py`
@@ -300,6 +319,7 @@ The test suite covers:
 - scalar core helpers
 - pricing behavior
 - validation policy
+- implied volatility solving
 - Greeks conventions and checked API behavior
 - scenario transformations and bridge decomposition
 - value surface generation
@@ -324,7 +344,6 @@ This project is a compact way to show a few engineering habits in one place:
 
 Potential next steps for the project:
 
-- implied volatility calculations
 - richer historical run exploration on top of the SQLite layer
 - custom user-defined scenario presets
 - more targeted UI and visualization tests
