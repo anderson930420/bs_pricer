@@ -6,6 +6,9 @@ from typing import Iterable, List, Tuple
 from .models import InstrumentId, Lot, RealizedPnL, Side, Trade, UnrealizedPnL
 
 
+QTY_EPSILON = 1e-9
+
+
 class InventoryError(ValueError):
     """Raised when sells exceed available inventory under FIFO policy."""
 
@@ -58,7 +61,7 @@ def apply_trades_fifo(trades: Iterable[Trade]) -> tuple[list[Lot], RealizedPnL]:
             raise ValueError(f"Unknown side: {t.side}")
 
         remaining = t.qty
-        while remaining > 0:
+        while remaining > QTY_EPSILON:
             if not lots:
                 raise InventoryError("SELL exceeds available inventory under FIFO")
 
@@ -71,7 +74,7 @@ def apply_trades_fifo(trades: Iterable[Trade]) -> tuple[list[Lot], RealizedPnL]:
             new_qty = head.qty - take
             remaining -= take
 
-            if new_qty == 0:
+            if new_qty <= QTY_EPSILON:
                 lots.pop(0)
             else:
                 lots[0] = Lot(
