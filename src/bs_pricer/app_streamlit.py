@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from bs_pricer.config import DEFAULT_PARAMS, UI_CONFIG
-from bs_pricer.scenario import SCENARIO_PRESETS, analyze_scenario
+from bs_pricer.scenario import SCENARIO_PRESETS, analyze_scenario, bridge_rows
 from bs_pricer.surface import value_surface
 from bs_pricer.surface_grid import surface_grid_config
 from bs_pricer.validation import greeks_checked, price_checked
@@ -233,23 +233,26 @@ def main() -> None:
                 option_type=selected_option,
                 shift=preset,
             )
-        except Exception as e:
+        except ValueError as e:
             st.error(f"Scenario error: {e}")
         else:
-            st.dataframe(
-                pd.DataFrame(
-                    [
-                        {
-                            "Input": item.name,
-                            "Before": item.display_before,
-                            "After": item.display_after,
-                        }
-                        for item in scenario_result.changed_inputs
-                    ]
-                ),
-                use_container_width=True,
-                hide_index=True,
-            )
+            if scenario_result.changed_inputs:
+                st.dataframe(
+                    pd.DataFrame(
+                        [
+                            {
+                                "Input": item.name,
+                                "Before": item.display_before,
+                                "After": item.display_after,
+                            }
+                            for item in scenario_result.changed_inputs
+                        ]
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.info("No scenario inputs changed.")
             if scenario_result.reached_expiry:
                 st.info("This scenario reaches expiry; scenario price uses expiration payoff.")
 
@@ -258,27 +261,24 @@ def main() -> None:
                 st.metric("Scenario price", f"${scenario_result.scenario_price:,.4f}")
             with result_cols[1]:
                 st.metric("Actual repricing change", f"{scenario_result.actual_change:,.4f}")
-            with result_cols[2]:
-                st.metric("First-order approximate change", f"{scenario_result.bridge.first_order_approx_change:,.4f}")
+            if scenario_result.bridge is not None:
+                with result_cols[2]:
+                    st.metric("First-order approximate change", f"{scenario_result.bridge.first_order_approx_change:,.4f}")
 
-            st.subheader("Price Bridge")
-            st.dataframe(
-                pd.DataFrame(
-                    [
-                        {"Component": "Delta", "Effect": scenario_result.bridge.delta_effect},
-                        {"Component": "Vega", "Effect": scenario_result.bridge.vega_effect},
-                        {"Component": "Theta", "Effect": scenario_result.bridge.theta_effect},
-                        {"Component": "Rho", "Effect": scenario_result.bridge.rho_effect},
-                        {"Component": "First-order approximation", "Effect": scenario_result.bridge.first_order_approx_change},
-                        {"Component": "Actual repricing change", "Effect": scenario_result.actual_change},
-                        {"Component": "Residual", "Effect": scenario_result.bridge.residual_change},
-                    ]
-                ),
-                use_container_width=True,
-                hide_index=True,
-            )
-            st.caption(scenario_result.rho_caveat)
-            st.caption(scenario_result.residual_caveat)
+                st.subheader("Price Bridge")
+                rows = bridge_rows(scenario_result)
+                assert rows is not None
+                st.dataframe(
+                    pd.DataFrame(rows),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                st.caption(scenario_result.rho_caveat)
+                st.caption(scenario_result.residual_caveat)
+            else:
+                with result_cols[2]:
+                    st.metric("First-order approximate change", "—")
+                st.info("Greeks unavailable for this base case")
 
     with surfaces_tab:
         st.header("Options Heatmap")

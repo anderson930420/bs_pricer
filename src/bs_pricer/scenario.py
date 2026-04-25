@@ -66,7 +66,7 @@ class ScenarioResult:
     base_price: float
     scenario_price: float
     actual_change: float
-    bridge: PriceBridge
+    bridge: PriceBridge | None
     reached_expiry: bool
     changed_inputs: tuple[ChangedInput, ...]
     rho_caveat: str = RHO_CAVEAT
@@ -149,11 +149,27 @@ def _fmt_days_from_years(value: float) -> str:
 
 
 def changed_inputs(base: ScenarioInputs, scenario: ScenarioInputs) -> tuple[ChangedInput, ...]:
-    return (
+    candidates = (
         ChangedInput("Spot", base.S, scenario.S, _fmt_money(base.S), _fmt_money(scenario.S)),
         ChangedInput("Volatility", base.sigma, scenario.sigma, _fmt_percent(base.sigma), _fmt_percent(scenario.sigma)),
         ChangedInput("Rate", base.r, scenario.r, _fmt_percent(base.r), _fmt_percent(scenario.r)),
         ChangedInput("Time to expiry", base.T, scenario.T, _fmt_days_from_years(base.T), _fmt_days_from_years(scenario.T)),
+    )
+    return tuple(item for item in candidates if item.after != item.before)
+
+
+def bridge_rows(result: ScenarioResult) -> tuple[dict[str, float | str], ...] | None:
+    if result.bridge is None:
+        return None
+
+    return (
+        {"Component": "Delta", "Effect": result.bridge.delta_effect},
+        {"Component": "Vega", "Effect": result.bridge.vega_effect},
+        {"Component": "Theta", "Effect": result.bridge.theta_effect},
+        {"Component": "Rho", "Effect": result.bridge.rho_effect},
+        {"Component": "First-order approximation", "Effect": result.bridge.first_order_approx_change},
+        {"Component": "Actual repricing change", "Effect": result.actual_change},
+        {"Component": "Residual", "Effect": result.bridge.residual_change},
     )
 
 
@@ -183,15 +199,27 @@ def analyze_scenario(
     scenario_price = float(scenario_prices[selected])
     actual_change = scenario_price - base_price
 
-    base_greeks = greeks_checked(S, K, sigma, T, r)
-    selected_greeks = getattr(base_greeks, selected)
-    delta_spot = scenario_inputs.S - S
-    delta_effect = selected_greeks.delta * delta_spot
-    vega_effect = selected_greeks.vega * shift.vol_points_shift * 0.01
-    theta_effect = selected_greeks.theta * shift.days_elapsed / 365.0
-    rho_effect = selected_greeks.rho * shift.rate_points_shift * 0.01
-    first_order_approx_change = delta_effect + vega_effect + theta_effect + rho_effect
-    residual_change = actual_change - first_order_approx_change
+    try:
+        base_greeks = greeks_checked(S, K, sigma, T, r)
+    except ValueError:
+        bridge = None
+    else:
+        selected_greeks = getattr(base_greeks, selected)
+        delta_spot = scenario_inputs.S - S
+        delta_effect = selected_greeks.delta * delta_spot
+        vega_effect = selected_greeks.vega * shift.vol_points_shift * 0.01
+        theta_effect = selected_greeks.theta * shift.days_elapsed / 365.0
+        rho_effect = selected_greeks.rho * shift.rate_points_shift * 0.01
+        first_order_approx_change = delta_effect + vega_effect + theta_effect + rho_effect
+        residual_change = actual_change - first_order_approx_change
+        bridge = PriceBridge(
+            delta_effect=delta_effect,
+            vega_effect=vega_effect,
+            theta_effect=theta_effect,
+            rho_effect=rho_effect,
+            first_order_approx_change=first_order_approx_change,
+            residual_change=residual_change,
+        )
 
     return ScenarioResult(
         shift=shift,
@@ -202,14 +230,7 @@ def analyze_scenario(
         base_price=base_price,
         scenario_price=scenario_price,
         actual_change=actual_change,
-        bridge=PriceBridge(
-            delta_effect=delta_effect,
-            vega_effect=vega_effect,
-            theta_effect=theta_effect,
-            rho_effect=rho_effect,
-            first_order_approx_change=first_order_approx_change,
-            residual_change=residual_change,
-        ),
+        bridge=bridge,
         reached_expiry=reached_expiry,
         changed_inputs=changed_inputs(base_inputs, scenario_inputs),
     )
