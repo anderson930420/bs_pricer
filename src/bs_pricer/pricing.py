@@ -1,17 +1,23 @@
-'''Only Pricing function for Black-Scholes-Merton model
-    No validation / IO / formatting'''
+"""Only pricing functions for the Black-Scholes-Merton model.
+
+No validation, IO, or UI formatting belongs here.
+"""
+
 import math
+
+from ._bs_core import d1_d2, norm_cdf
+
+
 def _d1_d2(S, K, sigma, T, r):
-    vol_sqrt_t = sigma * math.sqrt(T)
-    d1 = (math.log(S / K) + (r + 0.5 * sigma ** 2) * T) / vol_sqrt_t
-    d2 = d1 - vol_sqrt_t
-    return d1, d2
+    return d1_d2(S, K, T, r, sigma)
+
 
 def _norm_cdf(x: float) -> float:
     """
     Standard normal cumulative distribution function N(x).
     """
-    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+    return norm_cdf(x)
+
 
 def price(S, K, sigma, T, r):
     '''
@@ -30,9 +36,9 @@ def price(S, K, sigma, T, r):
     #Assemble the call price
     #Assemble the put price
     #Return the results
-    d1, d2 = _d1_d2(S, K, sigma, T, r)
-    n_d1 = _norm_cdf(d1)
-    n_d2 = _norm_cdf(d2)
+    d1, d2 = d1_d2(S, K, T, r, sigma)
+    n_d1 = norm_cdf(d1)
+    n_d2 = norm_cdf(d2)
     call_price = S * n_d1 - K * math.exp(-r * T) * n_d2
     put_price = K * math.exp(-r * T) * (1 - n_d2) - S * (1 - n_d1)
     return {"call": call_price, "put": put_price}

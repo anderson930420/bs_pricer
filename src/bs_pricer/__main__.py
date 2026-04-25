@@ -158,11 +158,14 @@ def _print_price_output(*, S: float, K: float, sigma: float, T: float, r: float,
 
 def main() -> None:
     parser = _build_parser()
-    args = parser.parse_args()
+    argv = sys.argv[1:]
+    if not argv:
+        argv = ["price"]
+    args = parser.parse_args(argv)
 
     # Backward-compatible default:
     # `python -m bs_pricer` behaves like `python -m bs_pricer price`
-    cmd = args.cmd or "price"
+    cmd = args.cmd
 
     if cmd == "price":
         try:

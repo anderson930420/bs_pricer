@@ -25,6 +25,16 @@ def test_cli_price_no_persist(tmp_path: Path) -> None:
     assert "Put Price:" in p.stdout
 
 
+def test_cli_no_args_defaults_to_price_command(tmp_path: Path) -> None:
+    proj = Path(__file__).resolve().parents[2]
+
+    p = _run([sys.executable, "-m", "bs_pricer"], cwd=proj)
+    assert p.returncode == 0
+    assert "Configuration Used:" in p.stdout
+    assert "Call Price:" in p.stdout
+    assert "Put Price:" in p.stdout
+
+
 def test_cli_price_persist_and_show(tmp_path: Path) -> None:
     proj = Path(__file__).resolve().parents[2]
     db = tmp_path / "tmp.db"

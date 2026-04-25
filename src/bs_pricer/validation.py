@@ -4,6 +4,7 @@ import math
 import numbers
 
 from . import pricing
+from . import greeks as greeks_module
 
 
 def _is_finite_real_number(value: object) -> bool:
@@ -68,3 +69,20 @@ def price_checked(S, K, sigma, T, r):
 
     # normal path
     return pricing.price(S, K, sigma, T, r)
+
+
+def greeks_checked(S, K, sigma, T, r):
+    """Validate inputs and return analytic Black-Scholes Greeks.
+
+    Analytic Greeks are only available for T > 0 and sigma > 0. Pricing still
+    supports T == 0 and sigma == 0 via deterministic policies.
+    """
+    _validate_numbers(S, K, sigma, T, r)
+    _validate_domain(S, K, sigma, T, r)
+
+    if T == 0:
+        raise ValueError("analytic Greeks are unavailable when T == 0")
+    if sigma == 0:
+        raise ValueError("analytic Greeks are unavailable when sigma == 0")
+
+    return greeks_module.greeks(S, K, sigma, T, r)
