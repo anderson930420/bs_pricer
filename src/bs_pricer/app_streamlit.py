@@ -7,8 +7,9 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from bs_pricer.config import DEFAULT_PARAMS, UI_CONFIG, GRID_CONFIG
+from bs_pricer.config import DEFAULT_PARAMS, UI_CONFIG
 from bs_pricer.surface import value_surface
+from bs_pricer.surface_grid import surface_grid_config
 from bs_pricer.validation import price_checked
 
 from bs_pricer.portfolio.models import InstrumentId, Side, Trade
@@ -104,13 +105,13 @@ def main() -> None:
     st.sidebar.divider()
     st.sidebar.subheader("Heatmap Parameters")
 
-    # Use GRID_CONFIG as the single source of truth for resolution/default ranges
-    spot_min_default = float(GRID_CONFIG.get("S_min", 80.0))
-    spot_max_default = float(GRID_CONFIG.get("S_max", 120.0))
-    vol_min_default = float(GRID_CONFIG.get("sigma_min", 0.10))
-    vol_max_default = float(GRID_CONFIG.get("sigma_max", 0.30))
-    n_spot_default = int(GRID_CONFIG.get("S_n", 10))
-    n_vol_default = int(GRID_CONFIG.get("sigma_n", 10))
+    grid_defaults = surface_grid_config(S)
+    spot_min_default = grid_defaults.spot_min
+    spot_max_default = grid_defaults.spot_max
+    vol_min_default = grid_defaults.vol_min
+    vol_max_default = grid_defaults.vol_max
+    n_spot_default = grid_defaults.spot_steps
+    n_vol_default = grid_defaults.vol_steps
 
     spot_min = float(st.sidebar.number_input("Min Spot Price", value=spot_min_default, step=1.0))
     spot_max = float(st.sidebar.number_input("Max Spot Price", value=spot_max_default, step=1.0))
