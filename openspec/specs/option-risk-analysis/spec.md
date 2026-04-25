@@ -75,9 +75,11 @@ The scenario layer MUST compute scenario repricing for the selected option type.
 
 #### Scenario: Scenario follows selected option side
 - **WHEN** selected option type is call
-- **THEN** scenario price, P&L, and bridge effects are computed for the call
+- **THEN** scenario price and P&L are computed for the call
+- **AND** bridge effects are computed for the call when base-case analytic Greeks are available
 - **WHEN** selected option type is put
-- **THEN** scenario price, P&L, and bridge effects are computed for the put
+- **THEN** scenario price and P&L are computed for the put
+- **AND** bridge effects are computed for the put when base-case analytic Greeks are available
 
 #### Scenario: Scenario handles invalid and expiry states
 - **WHEN** transformed volatility is negative
@@ -87,16 +89,24 @@ The scenario layer MUST compute scenario repricing for the selected option type.
 - **AND** negative time is not silently passed into Black-Scholes pricing
 
 ### Requirement: First-order Greek price bridge decomposes repricing
-Scenario results MUST include a first-order bridge from base-case Greeks and residual repricing effect.
+Scenario results MUST include a first-order bridge from base-case Greeks and residual repricing effect when base-case analytic Greeks are available.
+
+When the base case is price-valid but Greeks-invalid, including `T == 0` or `sigma == 0`, scenario analysis MUST still produce scenario prices and P&L, and MUST expose no price bridge.
 
 #### Scenario: Bridge effects use base Greeks and correct units
-- **WHEN** a scenario result is computed
+- **WHEN** scenario bridge effects are computed for a base case with valid analytic Greeks
 - **THEN** actual change equals scenario price minus base price
-- **AND** delta effect equals base delta times spot change
-- **AND** vega effect equals base vega times `vol_points_shift * 0.01`
-- **AND** theta effect equals base market-convention theta times `days_elapsed / 365.0`
-- **AND** rho effect equals base rho times `rate_points_shift * 0.01`
+- **AND** delta effect uses base delta times spot change
+- **AND** vega effect uses base vega times `vol_points_shift * 0.01`
+- **AND** theta effect uses base market-convention theta times `days_elapsed / 365.0`
+- **AND** rho effect uses base rho times `rate_points_shift * 0.01`
 - **AND** residual equals actual change minus the first-order approximation
+
+#### Scenario: Scenario pricing remains available when bridge is unavailable
+- **WHEN** scenario analysis is requested with a price-valid base case where `T == 0` or `sigma == 0`
+- **THEN** scenario prices and P&L are still computed
+- **AND** no first-order bridge is exposed
+- **AND** callers can distinguish the unavailable bridge state from a zero bridge
 
 #### Scenario: Residual represents nonlinear repricing
 - **WHEN** residual is displayed
@@ -126,6 +136,11 @@ The Streamlit app MUST provide tabs for price, scenarios, and surfaces without e
 - **AND** the base price is shown
 - **AND** preset scenario controls are shown
 - **AND** changed inputs are shown with before and after values
-- **AND** scenario result and bridge decomposition are shown
-- **AND** rho and residual caveats are available to render
+- **AND** scenario result is shown
+- **AND** bridge decomposition is shown when a price bridge is available
+- **AND** rho and residual caveats are available to render when a price bridge is available
 
+#### Scenario: Scenario tab handles unavailable bridge
+- **WHEN** scenario analysis returns no price bridge
+- **THEN** the UI displays `Greeks unavailable for this base case`
+- **AND** the UI does not access bridge fields
